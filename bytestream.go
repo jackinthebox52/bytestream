@@ -1,10 +1,8 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
-	"regexp"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -15,35 +13,15 @@ type stream struct {
 	StreamName     string    `json:"streamname"`
 	StreamReferrer string    `json:"streamreferrer"`
 	AddedTime      time.Time `json:"-"` //JSON ignores this field
+	UUID           string    `json:"-"`
 }
-
-var SINGLE_STREAM stream
 
 var STREAMS = []stream{}
-
-func validateStream(s stream) error {
-	urlRegex := `^(http(s):\/\/.)[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)$`
-	fmt.Println(s.StreamURL)
-	fmt.Println(s.StreamReferrer)
-	fmt.Println(s.StreamName)
-	if s.StreamURL == "" || s.StreamReferrer == "" {
-		return errors.New("Stream URL or Referrer is empty")
-	}
-
-	match, err := regexp.MatchString(urlRegex, s.StreamURL)
-	if err != nil {
-		return err
-	}
-	if !match {
-		return errors.New("Invalid Stream URL, must be a valid URL starting with http(s)://")
-	}
-
-	return nil
-}
 
 func addStream(c *gin.Context) {
 	new_stream := stream{}
 	new_stream.AddedTime = time.Now()
+	new_stream.UUID = generateUUID()
 	if err := c.BindJSON(&new_stream); err != nil {
 		c.Status(http.StatusBadRequest)
 		fmt.Println(err)
@@ -60,34 +38,49 @@ func addStream(c *gin.Context) {
 
 func getIndex(c *gin.Context) {
 	c.HTML(200, "index.tmpl", gin.H{
-		"title": "bytestream - home",
+		"title":   "bytestream - home",
+		"streams": STREAMS,
 	})
 }
 
 func getPlayer(c *gin.Context) {
-	c.HTML(200, "player.tmpl", gin.H{
-		"title": "bytestream - player",
-	})
+	if queryParam, ok := c.GetQuery("id"); ok {
+		if s, err := getStreamByUUID(queryParam); err == nil {
+			c.HTML(200, "player.tmpl", gin.H{
+				"title":     "bytestream - player",
+				"streamurl": s.StreamURL,
+			})
+		} else {
+			c.Status(http.StatusNotFound)
+			fmt.Println(err)
+		}
+	} else {
+		c.Status(http.StatusBadRequest)
+		fmt.Println("No ID query parameter")
+	}
 }
 
 func instantiateStreamList() {
 	s1 := stream{
-		StreamURL:      "https://www.youtube.com/watch?v=9E9hHkyZ8Lg",
-		StreamName:     "UFC 257",
-		StreamReferrer: "https://www.youtube.com/",
+		StreamURL:      "https://ed-c002.edgking.me/plyvivo/vesavako80hezi8ofe4i/media-u5e67ox2l_36267.ts",
+		StreamName:     "NFL RedZone",
+		StreamReferrer: "https://www.niaomea.me/",
 		AddedTime:      time.Now(),
+		UUID:           generateUUID(),
 	}
 	s2 := stream{
-		StreamURL:      "https://www.youtube.com/watch?v=9E9hHkyZ8Lg",
-		StreamName:     "UFC 257",
-		StreamReferrer: "https://www.youtube.com/",
+		StreamURL:      "https://ed-c003.edgking.me/plyvivo/504isoyida6apeloji90/media-uzbcaycgs_5347.ts",
+		StreamName:     "ESPN NBA",
+		StreamReferrer: "https://www.niaomea.me/",
 		AddedTime:      time.Now(),
+		UUID:           generateUUID(),
 	}
 	s3 := stream{
 		StreamURL:      "https://www.youtube.com/watch?v=9E9hHkyZ8Lg",
-		StreamName:     "UFC 257",
-		StreamReferrer: "https://www.youtube.com/",
+		StreamName:     "UFC 259",
+		StreamReferrer: "https://www.niaomea.me/",
 		AddedTime:      time.Now(),
+		UUID:           generateUUID(),
 	}
 	STREAMS = append(STREAMS, s1, s2, s3)
 }
@@ -97,7 +90,7 @@ func main() {
 	r := gin.Default()
 
 	r.Static("/hls", "./hls")
-	r.LoadHTMLGlob("web/*.html")
+	r.LoadHTMLGlob("web/templates/*.tmpl")
 
 	r.GET("/", getIndex)
 	r.GET("/player", getPlayer)

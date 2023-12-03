@@ -12,14 +12,15 @@
 </head>
 <body>
   <div class="list-group">
-    <a href="#" class="list-group-item list-group-item-action flex-column align-items-start active">
+    {{ range .streams }}
+    <a href="#" class="list-group-item list-group-item-action flex-column align-items-start">
       <div class="d-flex w-100 justify-content-between">
-        <h5 class="mb-1">UFC Fight Night</h5>
-        <small>5 min ago</small>
+        <h5 class="mb-1">{{ .StreamName }}</h5>
+        <small>ID: {{ .UUID }}</small>
       </div>
-      <p class="mb-1">Donec id elit non mi porta gravida at eget metus. Maecenas sed diam eget risus varius blandit.</p>
-      <small>Donec id elit non mi porta.</small>
+      <p class="mb-1">{{ .StreamURL }}</p>
     </a>
+    {{ end }}
   </div>
   <div class="mx-auto" style="width: 500px;">
     <form class="stuck">
