@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>bytestream</title>
+   <script src="/public/bytestream.js"></script> 
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+  <style>
+    body { padding-top: 50px; }
+    .stuck { position: absolute; bottom: 0;}
+  </style>
+</head>
+<body>
+  <div class="mx-auto" style="width: 500px;">
+    <form class="stuck">
+      <div class="form-group row">
+        <label for="staticEmail" class="col-sm-2 col-form-label">Stream URL</label>
+        <div class="col-sm-10">
+          <input class="form-control" type="text" id="streamLink" placeholder="(.m3u8)">
+        </div>
+      </div>
+      <div class="form-group row">
+        <label for="inputPassword" class="col-sm-2 col-form-label">Referrer</label>
+        <div class="col-sm-10">
+          <input class="form-control" type="text" id="referrerLink">
+        </div>
+      </div>
+      <div class="form-group row">
+        <div class="col-sm-10 offset-sm-2">
+          <button class="btn btn-primary">Add</button>
+        </div>
+      </div>
+        
+      </div>
+    </form>
+  </div>
+</body>
+</html>
