@@ -1,8 +1,11 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"os/exec"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -18,6 +21,24 @@ type stream struct {
 
 var STREAMS = []stream{}
 
+func spawnFFMPEG(s stream) error {
+	outfile, err := os.Create("./out.txt")
+	if err != nil {
+		fmt.Println(err)
+		return errors.New("Failed to create out.txt")
+	}
+	defer outfile.Close()
+	ffmpegd := exec.Command("./script/ffmpegd.sh")
+	ffmpegd.Stdout = outfile
+	err = ffmpegd.Start()
+	if err != nil {
+		fmt.Println(err)
+		return errors.New("Failed to start ffmpegd")
+	}
+	fmt.Println("ffmpegd spawned for stream " + s.StreamName + " with UUID " + s.UUID + " with PID " + fmt.Sprint(ffmpegd.Process.Pid))
+	return nil
+}
+
 func addStream(c *gin.Context) {
 	new_stream := stream{}
 	new_stream.AddedTime = time.Now()
@@ -32,7 +53,11 @@ func addStream(c *gin.Context) {
 		fmt.Println(err)
 		return
 	}
+	if new_stream.StreamName == "" {
+		new_stream.StreamName = "Untitled Stream - " + new_stream.UUID
+	}
 	STREAMS = append(STREAMS, new_stream) //Add the stream to the list
+	go spawnFFMPEG(new_stream)            //Spawn ffmpegd in a goroutine
 	c.Status(http.StatusCreated)
 }
 
@@ -47,7 +72,7 @@ func getPlayer(c *gin.Context) {
 	if queryParam, ok := c.GetQuery("id"); ok {
 		if s, err := getStreamByUUID(queryParam); err == nil {
 			c.HTML(200, "player.tmpl", gin.H{
-				"title":     "bytestream - player",
+				"title":     "bsplayer - " + s.StreamName,
 				"streamurl": s.StreamURL,
 			})
 		} else {
