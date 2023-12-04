@@ -28,8 +28,8 @@ func spawnFFMPEG(s stream) error {
 		return errors.New("Failed to create out.txt")
 	}
 	defer outfile.Close()
-	ffmpegd := exec.Command("./script/ffmpegd.sh")
-	ffmpegd.Stdout = outfile
+	ffmpegd := exec.Command("./script/ffmpegd.sh", s.StreamURL, s.UUID, s.StreamReferrer, s.StreamReferrer) //Todo add origin instead of second referrer
+	ffmpegd.Stderr = outfile
 	err = ffmpegd.Start()
 	if err != nil {
 		fmt.Println(err)
