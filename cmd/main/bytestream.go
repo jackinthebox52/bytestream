@@ -8,13 +8,13 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/jackinthebox52/bytestream/internal/stream"
+	"github.com/jackinthebox52/bytestream/internal/ingest"
 )
 
 var DEBUG = false
 
 func postBstreams(c *gin.Context) {
-	new_stream := stream.ByteStream{}
+	new_stream := ingest.ByteStream{}
 
 	if err := c.BindJSON(&new_stream); err != nil {
 		c.Status(http.StatusBadRequest)
@@ -22,7 +22,7 @@ func postBstreams(c *gin.Context) {
 		return
 	}
 
-	if _, err := stream.CreateStream(new_stream); err != nil {
+	if _, err := ingest.CreateStream(new_stream); err != nil {
 		c.Status(http.StatusBadRequest)
 	}
 
@@ -34,13 +34,13 @@ func postBstreams(c *gin.Context) {
 func getIndex(c *gin.Context) {
 	c.HTML(200, "index.tmpl", gin.H{
 		"title":   "bytestream - home",
-		"streams": stream.STREAMS,
+		"streams": ingest.STREAMS,
 	})
 }
 
 func getPlayer(c *gin.Context) {
 	if queryParam, ok := c.GetQuery("id"); ok {
-		if s, err := stream.GetStreamByUUID(queryParam); err == nil {
+		if s, err := ingest.GetStreamByUUID(queryParam); err == nil {
 			c.HTML(200, "player.tmpl", gin.H{
 				"title":     "bsplayer - " + s.StreamName,
 				"streamurl": s.StreamURL,
@@ -56,25 +56,25 @@ func getPlayer(c *gin.Context) {
 }
 
 func instantiateStreamList() {
-	s1 := stream.ByteStream{
+	s1 := ingest.ByteStream{
 		StreamURL:      "https://ed-c003.edgking.me/plyvivo/705in0ji3uje8u209ena/chunklist.m3u8",
 		StreamName:     "NFL RedZone",
 		StreamReferrer: "https://www.niaomea.me/",
 		AddedTime:      time.Now(),
-		UUID:           stream.GenerateUniqueUUID(),
+		UUID:           ingest.GenerateUniqueUUID(),
 	}
-	s2 := stream.ByteStream{
+	s2 := ingest.ByteStream{
 		StreamURL:      "https://ed-c003.edgking.me/plyvivo/504isoyida6apeloji90/media-uzbcaycgs_5347.ts",
 		StreamName:     "ESPN NBA",
 		StreamReferrer: "https://www.niaomea.me/",
 		AddedTime:      time.Now(),
-		UUID:           stream.GenerateUniqueUUID(),
+		UUID:           ingest.GenerateUniqueUUID(),
 	}
-	stream.STREAMS = append(stream.STREAMS, s1, s2)
+	ingest.STREAMS = append(ingest.STREAMS, s1, s2)
 }
 
 func main() {
-	instantiateStreamList() //TODO remove
+	//instantiateStreamList() //TODO remove
 	args := os.Args[1:]
 	if len(args) > 0 {
 		if args[0] == "-d" {

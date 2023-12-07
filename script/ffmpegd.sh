@@ -1,5 +1,5 @@
 #!/bin/sh
-#Format of the command: ./ffmpegd.sh StreamURL UUID Referrer Origin
+#Format of the command: ./ffmpegd.sh StreamURL UUID Referrer
 origin="${3%/}"
 ffmpeg -user_agent 'Mozilla/5.0 (Windows NT 10.0; rv:108.0) Gecko/20100101 Firefox/108.0' \
     -headers "Referer: $3\r\nOrigin: $origin\r\n" \

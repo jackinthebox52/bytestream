@@ -2,22 +2,76 @@ package ingest
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
 	"time"
 
-	"github.com/jackinthebox52/bytestream/internal/stream"
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
 
 type FFmpegD struct {
-	bs_obj    stream.ByteStream
-	proc_id   int
-	last_seen time.Time
+	Bstream  ByteStream
+	ProcId   *int
+	LastSeen time.Time
 }
 
 var FFmpegDs = []FFmpegD{}
 
-// IngestHLS ingests a stream using ffmpeg. Spawns a new ffmpeg process and appends it to the global FFmpegDs list. Returns an FFmpegD object
-func IngestHLS(bs stream.ByteStream) {
+// Creates a new FFmpegD object and appends it to the global FFmpegDs list
+func CreateFFmd(bs ByteStream) FFmpegD {
+	ffmd := FFmpegD{bs, nil, time.Now()}
+	FFmpegDs = append(FFmpegDs, ffmd)
+	IngestHLS_Binary(ffmd)
+	return ffmd
+}
+
+// Removes an FFmpegD object from the global FFmpegDs list, and kills the process
+func RemoveFFmpegD(uuid string) error { //TODO refactor
+	for i, d := range FFmpegDs {
+		if d.Bstream.UUID == uuid {
+			FFmpegDs = append(FFmpegDs[:i], FFmpegDs[i+1:]...)
+			if d.ProcId != nil {
+				fmt.Printf("Killing process %v\n", *d.ProcId)
+				err := exec.Command("kill", fmt.Sprintf("%v", *d.ProcId)).Run()
+				if err != nil {
+					return err
+				}
+				return nil
+			} else {
+				return nil
+			}
+		}
+	}
+	return fmt.Errorf("FFmpegD with UUID %v not found", uuid)
+}
+
+func GetFFmpegDByUUID(uuid string) (FFmpegD, error) {
+	for _, d := range FFmpegDs {
+		if d.Bstream.UUID == uuid {
+			return d, nil
+		}
+	}
+	return FFmpegD{}, fmt.Errorf("FFmpegD with UUID %v not found", uuid)
+}
+
+func IngestHLS_Binary(ffmd FFmpegD) {
+	bs := ffmd.Bstream
+	ref := bs.StreamReferrer
+	cmd := exec.Command("script/ffmpegd.sh", bs.StreamURL, bs.UUID, ref)
+	//cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Start()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	pid := cmd.Process.Pid
+	ffmd.ProcId = &pid
+	fmt.Printf("spawned ffmpegd for stream %v with UUID %v, process ID: %d\n", bs.StreamName, bs.UUID, pid)
+}
+
+// IngestHLS ingests a stream using ffmpeg. Spawns a new ffmpeg process and appends it to the global FFmpegDs list. Returns an FFmpegD object //NOT IMPLEMENTED ASYNCHRONOUSLY
+func IngestHLS_Library(bs ByteStream) {
 	ref := bs.StreamReferrer
 	origin := bs.StreamReferrer[:len(ref)-1]
 	err := ffmpeg.Input(bs.StreamURL, ffmpeg.KwArgs{
@@ -32,10 +86,14 @@ func IngestHLS(bs stream.ByteStream) {
 			"hls_time":      10,
 			"hls_list_size": 0,
 			"start_number":  0,
-		}).OverWriteOutput().ErrorToStdOut().Run()
+		}).OverWriteOutput().ErrorToStdOut().RunLinux()
 	if err != nil {
 		fmt.Println(err)
 	}
 	fmt.Println("ffmpegd completed for stream " + bs.StreamName + " with UUID " + bs.UUID)
+
+}
+
+func CleanOrphanedFFmpegDs(hours int) {
 
 }
