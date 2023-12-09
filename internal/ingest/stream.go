@@ -96,14 +96,17 @@ func SpawnDeleteStream() error {
 		if _, err := GetStreamByUUID(bs.UUID); err != nil { //If stream is not found in database, but is found in FFmpegDs list, delete it
 			fmt.Printf("Stream %v not found in database, deleting\n", bs.StreamName)
 			//FFmpegDs = append(FFmpegDs[:i], FFmpegDs[i+1:]...)
-			RemoveFFmpegD(bs.UUID)
+			removeFFmpegD(bs.UUID)
 		}
 	}
 
 	for _, s := range STREAMS {
 		if _, err := GetFFmpegDByUUID(s.UUID); err != nil { //If stream is not found in FFmpegDs list, but is found in database, create it
 			fmt.Printf("FFmpeg %v not found in FFmpegDs list, creating\n", s.StreamName)
-			CreateFFmd(s)
+			_, err = createFFmd(s)
+			if err != nil {
+				return err
+			}
 			fmt.Printf("Created stream %v\n", s.StreamName)
 		}
 	}
