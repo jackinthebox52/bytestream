@@ -81,6 +81,7 @@ func DeleteStream(uuid string) error {
 	for i, s := range STREAMS {
 		if s.UUID == uuid {
 			STREAMS = append(STREAMS[:i], STREAMS[i+1:]...)
+			SpawnDeleteStream() //Must be called after adding/deleting stream to update the ffmpegd list
 			return nil
 		}
 	}
@@ -89,12 +90,12 @@ func DeleteStream(uuid string) error {
 
 // SpawnDeleteStream iterated through the GLOBAL streams list and finds any streams that need created or deleted. It does this by checking the ByteStreams list against the FFmpegDs list
 func SpawnDeleteStream() error {
-	for i, s := range FFmpegDs {
+	for _, s := range FFmpegDs {
 		fmt.Printf("Checking stream %v\n", s.Bstream.StreamName)
 		bs := s.Bstream
 		if _, err := GetStreamByUUID(bs.UUID); err != nil { //If stream is not found in database, but is found in FFmpegDs list, delete it
 			fmt.Printf("Stream %v not found in database, deleting\n", bs.StreamName)
-			FFmpegDs = append(FFmpegDs[:i], FFmpegDs[i+1:]...)
+			//FFmpegDs = append(FFmpegDs[:i], FFmpegDs[i+1:]...)
 			RemoveFFmpegD(bs.UUID)
 		}
 	}

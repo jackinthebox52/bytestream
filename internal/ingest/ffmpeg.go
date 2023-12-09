@@ -2,7 +2,7 @@ package ingest
 
 import (
 	"fmt"
-	"os"
+	"log"
 	"os/exec"
 	"time"
 
@@ -20,8 +20,11 @@ var FFmpegDs = []FFmpegD{}
 // Creates a new FFmpegD object and appends it to the global FFmpegDs list
 func CreateFFmd(bs ByteStream) FFmpegD {
 	ffmd := FFmpegD{bs, nil, time.Now()}
-	FFmpegDs = append(FFmpegDs, ffmd)
-	IngestHLS_Binary(ffmd)
+	ff, err := IngestHLS_Binary(ffmd)
+	if err != nil {
+		log.Panic(err)
+	}
+	FFmpegDs = append(FFmpegDs, ff)
 	return ffmd
 }
 
@@ -29,15 +32,17 @@ func CreateFFmd(bs ByteStream) FFmpegD {
 func RemoveFFmpegD(uuid string) error { //TODO refactor
 	for i, d := range FFmpegDs {
 		if d.Bstream.UUID == uuid {
+			fmt.Printf("Removing FFmpegD with UUID %v\n", uuid)
 			FFmpegDs = append(FFmpegDs[:i], FFmpegDs[i+1:]...)
 			if d.ProcId != nil {
 				fmt.Printf("Killing process %v\n", *d.ProcId)
-				err := exec.Command("kill", fmt.Sprintf("%v", *d.ProcId)).Run()
+				err := exec.Command("kill -9", fmt.Sprintf("%v", *d.ProcId)).Run()
 				if err != nil {
 					return err
 				}
 				return nil
 			} else {
+				fmt.Println("Process ID is nil")
 				return nil
 			}
 		}
@@ -54,20 +59,21 @@ func GetFFmpegDByUUID(uuid string) (FFmpegD, error) {
 	return FFmpegD{}, fmt.Errorf("FFmpegD with UUID %v not found", uuid)
 }
 
-func IngestHLS_Binary(ffmd FFmpegD) {
+func IngestHLS_Binary(ffmd FFmpegD) (FFmpegD, error) {
 	bs := ffmd.Bstream
 	ref := bs.StreamReferrer
 	cmd := exec.Command("script/ffmpegd.sh", bs.StreamURL, bs.UUID, ref)
 	//cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	//cmd.Stderr = os.Stderr
 	err := cmd.Start()
 	if err != nil {
 		fmt.Println(err)
-		return
+		return FFmpegD{}, err
 	}
 	pid := cmd.Process.Pid
 	ffmd.ProcId = &pid
 	fmt.Printf("spawned ffmpegd for stream %v with UUID %v, process ID: %d\n", bs.StreamName, bs.UUID, pid)
+	return ffmd, nil
 }
 
 // IngestHLS ingests a stream using ffmpeg. Spawns a new ffmpeg process and appends it to the global FFmpegDs list. Returns an FFmpegD object //NOT IMPLEMENTED ASYNCHRONOUSLY

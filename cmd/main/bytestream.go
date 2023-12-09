@@ -21,9 +21,11 @@ func postBstreams(c *gin.Context) {
 		fmt.Println(err)
 		return
 	}
-
-	if _, err := ingest.CreateStream(new_stream); err != nil {
+	new_stream, err := ingest.CreateStream(new_stream)
+	if err != nil {
 		c.Status(http.StatusBadRequest)
+		fmt.Println(err)
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -52,6 +54,30 @@ func getPlayer(c *gin.Context) {
 	} else {
 		c.Status(http.StatusBadRequest)
 		fmt.Println("No ID query parameter")
+	}
+}
+
+type DeleteRequest struct {
+	UUID string `json:"uuid"`
+}
+
+func deleteBstreams(c *gin.Context) {
+	var request DeleteRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid request",
+		})
+		return
+	}
+
+	if err := ingest.DeleteStream(request.UUID); err == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"status": "success",
+			"uuid":   request.UUID,
+		})
+	} else {
+		c.Status(http.StatusNotFound)
+		fmt.Println(err)
 	}
 }
 
@@ -89,6 +115,7 @@ func main() {
 	r.GET("/", getIndex)
 	r.GET("/player", getPlayer)
 	r.POST("/bstreams", postBstreams)
+	r.POST("/rmstream", deleteBstreams)
 
 	r.Run(":8081") // listen and serve on 0.0.0.0:8081
 }
