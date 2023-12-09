@@ -109,7 +109,7 @@ func main() {
 	}
 	r := gin.Default()
 
-	r.Static("/hls", "./hls")
+	r.Static("/hls", "./streams/hls")
 	r.LoadHTMLGlob("web/templates/*.tmpl")
 
 	r.GET("/", getIndex)

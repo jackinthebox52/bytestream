@@ -50,6 +50,31 @@ func CleanOrphanedPIDFiles() error {
 	return nil
 }
 
+func CleanOldHlsFiles() error { //TODO rewrite to attempt to find the stream name
+	hlsDir := filepath.Join("streams", "hls")
+	files, err := os.ReadDir(hlsDir)
+	if err != nil {
+		return err
+	}
+	for _, f := range files {
+		if strings.HasSuffix(f.Name(), ".m3u8") || strings.HasSuffix(f.Name(), ".ts") {
+			filePath := filepath.Join(hlsDir, f.Name())
+			fileInfo, err := os.Stat(filePath)
+			if err != nil {
+				return err
+			}
+			if time.Since(fileInfo.ModTime()) > 24*time.Hour {
+				fmt.Printf("Removing old HLS file %v\n", f.Name())
+				err := os.Remove(filePath)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
 func LoadPIDFile(uuid string) (int, error) {
 	time.Sleep(1 * time.Second) //TODO remove
 	pidFilePath := filepath.Join(".", "streams", "pids", uuid+".pid")
