@@ -1,0 +1,10 @@
+
+
+
+
+
+
+
+
+                                TODO implement a database for storing bstreams and their metadata, implement cleanup system
+                                fix the hls player in the browser, advertise local msu8 link instead of buffstream link on index stream list

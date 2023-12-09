@@ -5,12 +5,27 @@ package internal
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/jackinthebox52/bytestream/internal/paths"
 )
+
+func FileExists(filePath string) bool {
+	_, err := os.Stat(filePath)
+	if err == nil {
+		return true
+	}
+	if os.IsNotExist(err) {
+		return false
+	}
+	return false
+}
 
 func IsProcessRunning(pid int) bool {
 	process, err := os.FindProcess(pid)
@@ -50,6 +65,19 @@ func CleanOrphanedPIDFiles() error {
 	return nil
 }
 
+func CleanHlsDir(uuid string) error {
+	if hlsDir, _, err := paths.CompileHlsPath(uuid); err == nil {
+		fmt.Printf("Cleaning HLS directory for UUID %v\n", hlsDir)
+		cmd := exec.Command("rm", "-rf", path.Join(hlsDir))
+		err = cmd.Run()
+		if err != nil {
+			return fmt.Errorf("Error cleaning HLS directory for UUID %v", uuid)
+		}
+		return nil
+	}
+	return fmt.Errorf("Error cleaning HLS directory for UUID %v", uuid)
+}
+
 func CleanOldHlsFiles() error { //TODO rewrite to attempt to find the stream name
 	hlsDir := filepath.Join("streams", "hls")
 	files, err := os.ReadDir(hlsDir)
@@ -76,7 +104,7 @@ func CleanOldHlsFiles() error { //TODO rewrite to attempt to find the stream nam
 }
 
 func LoadPIDFile(uuid string) (int, error) {
-	time.Sleep(1 * time.Second) //TODO remove
+	time.Sleep(200 * time.Millisecond) //TODO remove
 	pidFilePath := filepath.Join(".", "streams", "pids", uuid+".pid")
 	pidBytes, err := os.ReadFile(pidFilePath)
 	if err != nil {
@@ -89,4 +117,15 @@ func LoadPIDFile(uuid string) (int, error) {
 		return 0, err
 	}
 	return pid, nil
+}
+
+func CleanPIDFile(uuid string) error {
+	if pidFile, err := paths.CompilePidPath(uuid); err == nil {
+		err := os.Remove(pidFile)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	return fmt.Errorf("Error cleaning PID file for UUID %v", uuid)
 }

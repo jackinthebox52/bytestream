@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"net/http"
 	"os"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/jackinthebox52/bytestream/internal/ingest"
+	"github.com/jackinthebox52/bytestream/internal/paths"
 )
 
 var DEBUG = false
@@ -44,8 +46,8 @@ func getPlayer(c *gin.Context) {
 	if queryParam, ok := c.GetQuery("id"); ok {
 		if s, err := ingest.GetStreamByUUID(queryParam); err == nil {
 			c.HTML(200, "player.tmpl", gin.H{
-				"title":     "bsplayer - " + s.StreamName,
-				"streamurl": s.StreamURL,
+				"title": "bsplayer - " + s.StreamName,
+				"UUID":  template.JS(s.UUID),
 			})
 		} else {
 			c.Status(http.StatusNotFound)
@@ -109,7 +111,11 @@ func main() {
 	}
 	r := gin.Default()
 
-	r.Static("/hls", "./streams/hls")
+	if hlsDir, err := paths.CompileHlsBase(); err != nil {
+		panic(err)
+	} else {
+		r.Static("/hls", hlsDir)
+	}
 	r.LoadHTMLGlob("web/templates/*.tmpl")
 
 	r.GET("/", getIndex)

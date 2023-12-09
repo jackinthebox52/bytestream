@@ -73,13 +73,13 @@ func CreateStream(s ByteStream) (ByteStream, error) {
 	if s.StreamName == "" {
 		s.StreamName = "Untitled Stream - " + s.UUID
 	}
-	initalizeDirectory(s.UUID)
+	initalizeHLSDirectory(s.UUID)
 	STREAMS = append(STREAMS, s)
 	SpawnDeleteStream()
 	return s, nil
 }
 
-func initalizeDirectory(uuid string) error {
+func initalizeHLSDirectory(uuid string) error {
 	dirs := []string{fmt.Sprintf("streams/hls/%s", uuid)}
 	for _, d := range dirs {
 		if err := os.MkdirAll(d, os.ModePerm); err != nil {

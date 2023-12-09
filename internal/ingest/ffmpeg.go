@@ -2,12 +2,11 @@ package ingest
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"time"
 
 	"github.com/jackinthebox52/bytestream/internal"
+	"github.com/jackinthebox52/bytestream/internal/paths"
 )
 
 type FFmpegD struct {
@@ -36,15 +35,18 @@ func removeFFmpegD(uuid string) error { //TODO refactor
 			fmt.Printf("Removing FFmpegD with UUID %v\n", uuid)
 			FFmpegDs = append(FFmpegDs[:i], FFmpegDs[i+1:]...)
 			if d.ProcId != nil {
-				fmt.Printf("Killing process %v\n", *d.ProcId)
-				err := exec.Command("kill -9", fmt.Sprintf("%v", *d.ProcId)).Run()
-				if err != nil {
+				if err := exec.Command("kill", "-9", fmt.Sprintf("%v", *d.ProcId)).Run(); err != nil {
+					fmt.Println(err)
 					return err
 				}
+				if err := internal.CleanPIDFile(uuid); err != nil {
+					return err
+				}
+				fmt.Printf("Archiving stream %v\n", d.Bstream.StreamName)
+				archiveHLS_MKV(d.Bstream)
 				return nil
 			} else {
-				fmt.Println("Process ID is nil")
-				return nil
+				return fmt.Errorf("Process ID is nil")
 			}
 		}
 	}
@@ -61,12 +63,15 @@ func GetFFmpegDByUUID(uuid string) (FFmpegD, error) {
 }
 
 func IngestHLS_Binary(ffmd FFmpegD) (FFmpegD, error) {
-	bs := ffmd.Bstream
-	ref := bs.StreamReferrer
-	cmd := exec.Command("script/ffmpegd.sh", bs.StreamURL, bs.UUID, ref)
-	//cmd.Stdout = &outb
-	cmd.Stderr = os.Stderr
-	err := cmd.Start()
+	bs, ref := ffmd.Bstream, ffmd.Bstream.StreamReferrer
+	scriptPath, err := paths.CompileScriptPath("ffmpegd")
+	if err != nil {
+		fmt.Println(err)
+		return FFmpegD{}, err
+	}
+	cmd := exec.Command(scriptPath, bs.StreamURL, bs.UUID, ref)
+	//cmd.Stderr = os.Stderr
+	err = cmd.Start()
 	if err != nil {
 		fmt.Println(err)
 		return FFmpegD{}, err
@@ -114,15 +119,19 @@ func CleanOldFFmpegDs(hours int, ffmpegds []FFmpegD) []FFmpegD {
 	return newFFmpegds
 }
 
-// ArchiveHLS archives a stream using ffmpeg. Takes a ByteStream object as an argument. //ASYNC
-func ArchiveHLS(bs ByteStream) {
+// Archives a stream to an mkv using ffmpeg. Takes a ByteStream object as an argument. //ASYNC
+func archiveHLS_MKV(bs ByteStream) {
 	go func() {
-		scriptPath := filepath.Join(".", "script", "hls.mkv")
-		cmd := exec.Command(scriptPath, bs.UUID)
-		err := cmd.Run()
-		if err != nil {
-			fmt.Println("Error executing hls.mkv:", err)
+		if scriptPath, err := paths.CompileScriptPath("hls-mkv"); err == nil {
+			cmd := exec.Command(scriptPath, bs.UUID)
+			if err = cmd.Run(); err != nil {
+				fmt.Println("Error executing hls-mkv:", err)
+			}
+
+			if err := internal.CleanHlsDir(bs.UUID); err != nil {
+				fmt.Println(err)
+			}
+			return
 		}
 	}()
-	return
 }

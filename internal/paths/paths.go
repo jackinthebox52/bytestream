@@ -1,4 +1,4 @@
-package path
+package paths
 
 import (
 	"fmt"
@@ -46,7 +46,7 @@ func CompileHlsBase() (string, error) {
 	return hlsDir, nil
 }
 
-func compilePidPath(streamId string) (string, error) {
+func CompilePidPath(streamId string) (string, error) {
 	filePath := path.Join(rootPath(), "streams/pids", streamId+".pid")
 	if _, err := os.Stat(filePath); err != nil {
 		return "", fmt.Errorf("PID file %v not found", filePath)
