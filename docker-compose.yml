@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+  hls-restreamer:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./bytestream-data:/var/www/streams
+    restart: unless-stopped
+
+volumes:
+  stream-data:

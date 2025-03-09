@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Bytestream Manager</h1>
+    
+    <div class="tabs">
+      <button id="tab-detected" class="tab-btn active">Detected Streams</button>
+      <button id="tab-active" class="tab-btn">Active Streams</button>
+    </div>
+    
+    <div id="detected-streams" class="tab-content active">
+      <div class="header-actions">
+        <button id="refresh-detected">Refresh</button>
+        <button id="clear-detected">Clear All</button>
+      </div>
+      <div id="detected-list" class="stream-list">
+        <div class="loading">Loading detected streams...</div>
+      </div>
+    </div>
+    
+    <div id="active-streams" class="tab-content">
+      <div class="header-actions">
+        <button id="refresh-active">Refresh</button>
+      </div>
+      <div id="active-list" class="stream-list">
+        <div class="loading">Loading active streams...</div>
+      </div>
+    </div>
+    
+    <div id="stream-form" class="hidden">
+      <h2 id="form-title">Add Stream</h2>
+      <form id="stream-details">
+        <input type="hidden" id="stream-action" value="add">
+        
+        <div class="form-group">
+          <label for="stream-name">Name:</label>
+          <input type="text" id="stream-name" placeholder="Stream name (e.g., NFL)" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="stream-origin">Origin:</label>
+          <input type="text" id="stream-origin" placeholder="https://example.com" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="stream-url">Stream URL:</label>
+          <input type="text" id="stream-url" placeholder="https://example.com/stream.m3u8" required>
+        </div>
+        
+        <div class="form-actions">
+          <button type="button" id="cancel-form">Cancel</button>
+          <button type="submit" id="submit-form">Add Stream</button>
+        </div>
+      </form>
+    </div>
+    
+    <div class="status-bar">
+      <span id="status-message"></span>
+    </div>
+  </div>
+  
+  <template id="detected-stream-template">
+    <div class="stream-item">
+      <div class="stream-info">
+        <div class="stream-url" title=""></div>
+        <div class="stream-origin"></div>
+      </div>
+      <div class="stream-actions">
+        <button class="add-stream-btn">Add to Server</button>
+      </div>
+    </div>
+  </template>
+  
+  <template id="active-stream-template">
+    <div class="stream-item">
+      <div class="stream-info">
+        <div class="stream-name"></div>
+        <div class="stream-url" title=""></div>
+        <div class="stream-origin"></div>
+        <div class="stream-status"></div>
+      </div>
+      <div class="stream-actions">
+        <button class="update-stream-btn">Update</button>
+        <button class="remove-stream-btn">Remove</button>
+        <a class="view-stream-btn" target="_blank">View</a>
+      </div>
+    </div>
+  </template>
+  
+  <script src="popup.js"></script>
+</body>
+</html>

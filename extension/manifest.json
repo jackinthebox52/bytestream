@@ -1,0 +1,28 @@
+{
+    "manifest_version": 2,
+    "name": "Bytestream Manager",
+    "version": "1.0",
+    "description": "Detects and manages HLS streams for restreaming",
+    "icons": {
+      "48": "icons/icon-48.png",
+      "96": "icons/icon-96.png"
+    },
+    "permissions": [
+      "webRequest",
+      "webRequestBlocking",
+      "storage",
+      "<all_urls>",
+      "tabs"
+    ],
+    "background": {
+      "scripts": ["background.js"]
+    },
+    "browser_action": {
+      "default_icon": {
+        "48": "icons/icon-48.png"
+      },
+      "default_title": "Bytestream Manager",
+      "default_popup": "popup/popup.html"
+    }
+  }
+  
