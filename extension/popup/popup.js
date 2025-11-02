@@ -1,4 +1,86 @@
-// DOM Elements
+// Load server configuration
+function loadServerConfig() {
+  browser.runtime.sendMessage({ action: "getServerConfig" })
+    .then(response => {
+      if (response && response.serverConfig) {
+        serverUrl.value = response.serverConfig.url;
+        
+        if (response.serverConfig.isConnected) {
+          showContent();
+        } else {
+          showServerConfig();
+        }
+      }
+    });
+}
+
+// Test connection to server
+function testConnection() {
+  const url = serverUrl.value.trim();
+  
+  if (!url) {
+    setConnectionStatus("Please enter a server URL", true);
+    return;
+  }
+  
+  // Validate URL format
+  if (!url.match(/^https?:\/\/.+/)) {
+    setConnectionStatus("Invalid URL format. Use http://hostname:port", true);
+    return;
+  }
+  
+  setConnectionStatus("Testing connection...");
+  
+  // Update server URL in background
+  browser.runtime.sendMessage({ 
+    action: "updateServerConfig",
+    url: url
+  })
+  .then(() => {
+    // Test connection
+    return browser.runtime.sendMessage({ action: "testServerConnection" });
+  })
+  .then(result => {
+    if (result.success) {
+      let message = "Connection successful";
+      if (result.status && result.status.streams_count !== undefined) {
+        message += ` - ${result.status.streams_count} active streams`;
+      }
+      setConnectionStatus(message, false);
+      // Wait a moment before showing content
+      setTimeout(showContent, 1000);
+    } else {
+      setConnectionStatus(`Connection failed: ${result.error}`, true);
+    }
+  })
+  .catch(error => {
+    setConnectionStatus(`Error: ${error.message}`, true);
+  });
+}
+
+// Set connection status message
+function setConnectionStatus(message, isError = false) {
+  connectionStatus.textContent = message;
+  connectionStatus.className = "connection-status";
+  if (isError) {
+    connectionStatus.classList.add("error");
+  } else if (message === "Connection successful") {
+    connectionStatus.classList.add("success");
+  }
+}
+
+// Show server configuration
+function showServerConfig() {
+  serverConfig.classList.remove("hidden");
+  contentContainer.classList.add("hidden");
+}
+
+// Show main content
+function showContent() {
+  serverConfig.classList.add("hidden");
+  contentContainer.classList.remove("hidden");
+  loadDetectedStreams();
+}// DOM Elements
 const detectedTab = document.getElementById("tab-detected");
 const activeTab = document.getElementById("tab-active");
 const detectedStreamsContent = document.getElementById("detected-streams");
@@ -18,6 +100,15 @@ const cancelFormBtn = document.getElementById("cancel-form");
 const submitFormBtn = document.getElementById("submit-form");
 const streamDetailsForm = document.getElementById("stream-details");
 const statusMessage = document.getElementById("status-message");
+
+// Server config elements
+const serverConfig = document.getElementById("server-config");
+const serverUrl = document.getElementById("server-url");
+const testConnectionBtn = document.getElementById("test-connection");
+const saveConfigBtn = document.getElementById("save-config");
+const connectionStatus = document.getElementById("connection-status");
+const contentContainer = document.getElementById("content-container");
+const serverSettingsBtn = document.getElementById("server-settings");
 
 // Templates
 const detectedStreamTemplate = document.getElementById("detected-stream-template");
@@ -412,5 +503,13 @@ streamDetailsForm.addEventListener("submit", event => {
 
 // Initialize
 document.addEventListener("DOMContentLoaded", () => {
-  loadDetectedStreams();
+  loadServerConfig();
+  
+  // Event listeners for server config
+  testConnectionBtn.addEventListener("click", testConnection);
+  saveConfigBtn.addEventListener("click", () => {
+    testConnection();
+  });
+  
+  serverSettingsBtn.addEventListener("click", showServerConfig);
 });

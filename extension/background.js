@@ -1,8 +1,11 @@
 // Store for detected streams
 let detectedStreams = [];
 
-// API server configuration
-const API_SERVER = "http://localhost:8080";
+// Server configuration
+let serverConfig = {
+  url: "http://localhost:8080",  // Default
+  isConnected: false
+};
 
 // Filter specifically for .m3u8 requests and capture their headers
 browser.webRequest.onBeforeSendHeaders.addListener(
@@ -78,6 +81,49 @@ function loadDetectedStreams() {
   });
 }
 
+// Save server config to storage
+function saveServerConfig() {
+  browser.storage.local.set({ serverConfig: serverConfig });
+}
+
+// Load server config from storage
+function loadServerConfig() {
+  browser.storage.local.get("serverConfig").then(result => {
+    if (result.serverConfig) {
+      serverConfig = result.serverConfig;
+      // Test connection on load
+      testServerConnection();
+    }
+  });
+}
+
+// Test connection to server
+function testServerConnection() {
+  return fetch(`${serverConfig.url}/api/status`, {
+    headers: {
+      'Cache-Control': 'no-cache'
+    }
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+    }
+    return response.json();
+  })
+  .then(data => {
+    console.log("Server status:", data);
+    serverConfig.isConnected = true;
+    saveServerConfig();
+    return { success: true, status: data };
+  })
+  .catch(error => {
+    console.error("Server connection test failed:", error);
+    serverConfig.isConnected = false;
+    saveServerConfig();
+    return { success: false, error: error.message };
+  });
+}
+
 // Update badge with count of streams
 function updateBadge() {
   browser.browserAction.setBadgeText({
@@ -88,7 +134,7 @@ function updateBadge() {
 
 // API functions
 function addStreamToServer(name, origin, url) {
-  return fetch(`${API_SERVER}/api/stream/start`, {
+  return fetch(`${serverConfig.url}/api/stream/start`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -100,7 +146,7 @@ function addStreamToServer(name, origin, url) {
 
 function updateStreamOnServer(name, origin, url) {
   // Stop the existing stream first
-  return fetch(`${API_SERVER}/api/stream/stop/${name}`, {
+  return fetch(`${serverConfig.url}/api/stream/stop/${name}`, {
     method: "POST"
   })
   .then(response => {
@@ -120,7 +166,7 @@ function updateStreamOnServer(name, origin, url) {
 }
 
 function removeStreamFromServer(name) {
-  return fetch(`${API_SERVER}/api/stream/stop/${name}`, {
+  return fetch(`${serverConfig.url}/api/stream/stop/${name}`, {
     method: "POST",
     headers: {
       'Cache-Control': 'no-cache'
@@ -131,7 +177,7 @@ function removeStreamFromServer(name) {
 
 function getStreamsFromServer() {
   // Add a cache-busting parameter to ensure we get fresh data
-  return fetch(`${API_SERVER}/api/streams?nocache=${Date.now()}`, {
+  return fetch(`${serverConfig.url}/api/streams?nocache=${Date.now()}`, {
     headers: {
       'Cache-Control': 'no-cache',
       'Pragma': 'no-cache'
@@ -147,6 +193,7 @@ function getStreamsFromServer() {
 
 // Initialize
 loadDetectedStreams();
+loadServerConfig();
 
 // Listen for messages from popup
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -179,6 +226,20 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   else if (message.action === "getServerStreams") {
     getStreamsFromServer()
+      .then(result => sendResponse(result))
+      .catch(error => sendResponse({ error: error.toString() }));
+    return true; // Required for async sendResponse
+  }
+  else if (message.action === "getServerConfig") {
+    sendResponse({ serverConfig });
+  }
+  else if (message.action === "updateServerConfig") {
+    serverConfig.url = message.url;
+    saveServerConfig();
+    sendResponse({ success: true });
+  }
+  else if (message.action === "testServerConnection") {
+    testServerConnection()
       .then(result => sendResponse(result))
       .catch(error => sendResponse({ error: error.toString() }));
     return true; // Required for async sendResponse

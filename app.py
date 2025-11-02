@@ -1,13 +1,95 @@
-# app.py - Main Flask Application
 from flask import Flask, request, jsonify, send_from_directory, make_response
 import os
 import subprocess
 import threading
 import time
+import threading
 import json
 import re
+import datetime
+
+# Constants
+STREAMS_DIR = '/var/www/streams'
+STREAMS_FILE = '/var/www/streams/streams.json'
+active_streams = {}  # Dictionary to track running stream processes
 
 app = Flask(__name__)
+
+@app.route('/api/status', methods=['GET'])
+def server_status():
+    """Simple endpoint for server health check"""
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return jsonify({
+        'status': 'up',
+        'time': now,
+        'streams_count': len(active_streams)
+    })# Clean up old streams
+def cleanup_old_streams():
+    while True:
+        try:
+            print("Running scheduled stream cleanup...")
+            current_time = time.time()
+            max_age_seconds = 12 * 60 * 60  # 12 hours in seconds
+            
+            # Identify old streams
+            streams_to_remove = []
+            for name, data in active_streams.items():
+                if 'created_at' in data:
+                    stream_age = current_time - data['created_at']
+                    if stream_age > max_age_seconds:
+                        streams_to_remove.append(name)
+                        print(f"Stream {name} is {stream_age/3600:.1f} hours old and will be removed")
+            
+            # Remove old streams
+            for name in streams_to_remove:
+                try:
+                    print(f"Cleaning up old stream: {name}")
+                    
+                    # Stop process if running
+                    if name in active_streams and 'process' in active_streams[name] and active_streams[name]['process']:
+                        try:
+                            active_streams[name]['process'].terminate()
+                            print(f"Terminated process for stream {name}")
+                        except Exception as e:
+                            print(f"Error terminating process: {str(e)}")
+                    
+                    # Clean up stream files
+                    stream_dir = os.path.join(STREAMS_DIR, name)
+                    if os.path.exists(stream_dir):
+                        try:
+                            # Remove all files in the directory
+                            for file in os.listdir(stream_dir):
+                                file_path = os.path.join(stream_dir, file)
+                                if os.path.isfile(file_path):
+                                    os.unlink(file_path)
+                                    print(f"Removed file: {file_path}")
+                            
+                            # Remove the directory itself
+                            os.rmdir(stream_dir)
+                            print(f"Removed stream directory: {stream_dir}")
+                        except Exception as e:
+                            print(f"Error removing stream files: {str(e)}")
+                    
+                    # Remove from active streams
+                    if name in active_streams:
+                        del active_streams[name]
+                        print(f"Removed stream entry for {name}")
+                    
+                except Exception as e:
+                    print(f"Error cleaning up stream {name}: {str(e)}")
+            
+            print(f"Cleanup completed. Removed {len(streams_to_remove)} old streams.")
+        except Exception as e:
+            print(f"Error in cleanup thread: {str(e)}")
+        
+        # Sleep for 1 hour before next cleanup
+        time.sleep(3600)
+
+# Start cleanup thread
+cleanup_thread = threading.Thread(target=cleanup_old_streams)
+cleanup_thread.daemon = True
+cleanup_thread.start()
+print("Stream cleanup scheduler started")# app.py - Main Flask Application
 
 # Add no-cache headers to all responses
 @app.after_request
@@ -16,11 +98,6 @@ def add_header(response):
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
     return response
-
-# Constants
-STREAMS_DIR = '/var/www/streams'
-STREAMS_FILE = '/var/www/streams/streams.json'
-active_streams = {}  # Dictionary to track running stream processes
 
 # Create streams directory if it doesn't exist
 try:

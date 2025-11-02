@@ -1,4 +1,35 @@
-.stream-details {
+.server-config {
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.connection-status {
+  margin-top: 10px;
+  font-size: 13px;
+}
+
+.connection-status.success {
+  color: #4CAF50;
+}
+
+.connection-status.error {
+  color: #f44336;
+}
+
+.server-settings-btn {
+  margin-left: auto;
+  font-size: 12px;
+  padding: 3px 8px;
+}
+
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}.stream-details {
   margin-top: 5px;
   font-size: 11px;
   color: #666;
